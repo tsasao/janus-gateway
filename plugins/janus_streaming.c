@@ -2361,6 +2361,49 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 				goto plugin_response;
 			}
 			janus_mutex_lock(&source->rec_mutex);
+
+			char nfofile[1024], nfo[1024];
+			guint64 recording_id = janus_random_uint64();
+			g_snprintf(nfofile, 1024, "%s/%"SCNu64".nfo", recordings_path, recording_id);
+			FILE *file = fopen(nfofile, "wt");
+			if(file == NULL) {
+				JANUS_LOG(LOG_ERR, "Error creating file %s...\n", nfofile);
+			} else {
+				/* Create a date string */
+				time_t t = source->vrc->created / 1000000;
+				struct tm *tmv = localtime(&t);
+				char start[200];
+				strftime(start, sizeof(start), "%Y-%m-%d %H:%M:%S", tmv);
+				
+				t = time(NULL);
+				tmv = localtime(&t);
+				char stop[200];
+				strftime(stop, sizeof(stop), "%Y-%m-%d %H:%M:%S", tmv);
+				
+				char *origname = strndup(source->vrc->filename, strlen(source->vrc->filename)-8); /* strip ".tmp.mjr" */
+				
+				if(source->vrc->filename) {
+					g_snprintf(nfo, 1024,
+							   "[%"SCNu64"]\r\n"
+							   "name = %s\r\n"
+							   "subname = %s\r\n"
+							   "date = %s\r\n"
+							   "date_end = %s\r\n"
+							   "video = %s.mjr\r\n",
+							   recording_id,
+							   mp->name,
+							   mp->name,
+							   start,
+							   stop,
+							   origname);
+				}
+				/* Write to the file now */
+				fwrite(nfo, strlen(nfo), sizeof(char), file);
+				fclose(file);
+				
+				free(origname);
+			}
+            
 			if(audio && json_is_true(audio) && source->arc) {
 				/* Close the audio recording */
 				janus_recorder_close(source->arc);
