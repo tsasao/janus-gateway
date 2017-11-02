@@ -491,6 +491,7 @@ GHashTable *mountpoints;
 static GList *old_mountpoints;
 janus_mutex mountpoints_mutex;
 static char *admin_key = NULL;
+static char *recordings_path = NULL;
 
 static void janus_streaming_mountpoint_free(janus_streaming_mountpoint *mp);
 
@@ -703,6 +704,9 @@ int janus_streaming_init(janus_callbacks *callback, const char *config_path) {
 		if(!notify_events && callback->events_is_enabled()) {
 			JANUS_LOG(LOG_WARN, "Notification of events to handlers disabled for %s\n", JANUS_STREAMING_NAME);
 		}
+		janus_config_item *path = janus_config_get_item_drilldown(config, "general", "path");
+		if(path != NULL && path->value != NULL)
+			recordings_path = g_strdup(path->value);
 		/* Iterate on all rooms */
 		GList *cl = janus_config_get_categories(config);
 		while(cl != NULL) {
@@ -1199,6 +1203,7 @@ void janus_streaming_destroy(void) {
 
 	janus_config_destroy(config);
 	g_free(admin_key);
+    g_free(recordings_path);
 
 	g_atomic_int_set(&initialized, 0);
 	g_atomic_int_set(&stopping, 0);
@@ -2269,7 +2274,7 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 				else if(strstr(mp->codecs.audio_rtpmap, "g722") || strstr(mp->codecs.audio_rtpmap, "G722"))
 					codec = "g722";
 				const char *audiofile = json_string_value(audio);
-				arc = janus_recorder_create(NULL, codec, (char *)audiofile);
+				arc = janus_recorder_create(recordings_path, codec, (char *)audiofile);
 				if(arc == NULL) {
 					JANUS_LOG(LOG_ERR, "[%s] Error starting recorder for audio\n", mp->name);
 					janus_mutex_unlock(&mountpoints_mutex);
@@ -2288,7 +2293,7 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 				else if(strstr(mp->codecs.video_rtpmap, "h264") || strstr(mp->codecs.video_rtpmap, "H264"))
 					codec = "h264";
 				const char *videofile = json_string_value(video);
-				vrc = janus_recorder_create(NULL, codec, (char *)videofile);
+				vrc = janus_recorder_create(recordings_path, codec, (char *)videofile);
 				if(vrc == NULL) {
 					if(arc != NULL) {
 						janus_recorder_close(arc);
@@ -2305,7 +2310,7 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 			}
 			if(data) {
 				const char *datafile = json_string_value(data);
-				drc = janus_recorder_create(NULL, "text", (char *)datafile);
+				drc = janus_recorder_create(recordings_path, "text", (char *)datafile);
 				if(drc == NULL) {
 					if(arc != NULL) {
 						janus_recorder_close(arc);
