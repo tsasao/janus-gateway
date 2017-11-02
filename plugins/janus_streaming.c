@@ -2116,8 +2116,12 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 					codec = "vp9";
 				else if(strstr(mp->codecs.video_rtpmap, "h264") || strstr(mp->codecs.video_rtpmap, "H264"))
 					codec = "h264";
-				const char *videofile = json_string_value(video);
-				vrc = janus_recorder_create(recordings_path, codec, (char *)videofile);
+
+				/* generate filename by prefix from parameter and long numeric string by clock */
+				char videofile[1024];
+				g_snprintf(videofile, 1024, "%s%"SCNu64, json_string_value(video), janus_get_real_time());
+
+				vrc = janus_recorder_create(recordings_path, codec, (char *)&videofile);
 				if(vrc == NULL) {
 					if(arc != NULL) {
 						janus_recorder_close(arc);
@@ -2209,13 +2213,13 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 				if(source->vrc->filename) {
 					g_snprintf(nfo, 1024,
 							   "[%"SCNu64"]\r\n"
-							   "name = %s\r\n"
+							   "name = %"SCNu64"\r\n"
 							   "subname = %s\r\n"
 							   "date = %s\r\n"
 							   "date_end = %s\r\n"
 							   "video = %s.mjr\r\n",
 							   recording_id,
-							   mp->name,
+							   mp->id,
 							   mp->name,
 							   start,
 							   stop,
