@@ -378,7 +378,9 @@ janus_recordplay_frame_packet *janus_recordplay_get_frames(const char *dir, cons
 typedef struct janus_recordplay_recording {
 	guint64 id;			/* Recording unique ID */
 	char *name;			/* Name of the recording */
+	char *subname;			/* Sub Name of the recording */
 	char *date;			/* Time of the recording */
+	char *date_end;			/* Time of the recording finished */
 	char *arc_file;		/* Audio file name */
 	const char *acodec;	/* Codec used for audio, if available */
 	int audio_pt;		/* Payload types to use for audio when playing recordings */
@@ -950,7 +952,9 @@ struct janus_plugin_result *janus_recordplay_handle_message(janus_plugin_session
 			json_t *ml = json_object();
 			json_object_set_new(ml, "id", json_integer(rec->id));
 			json_object_set_new(ml, "name", json_string(rec->name));
+			json_object_set_new(ml, "subname", json_string(rec->subname));
 			json_object_set_new(ml, "date", json_string(rec->date));
+			json_object_set_new(ml, "date_end", json_string(rec->date_end));
 			json_object_set_new(ml, "audio", rec->arc_file ? json_true() : json_false());
 			if(rec->acodec)
 				json_object_set_new(ml, "audio_codec", json_string(rec->acodec));
@@ -1753,7 +1757,9 @@ void janus_recordplay_update_recordings_list(void) {
 			continue;
 		}
 		janus_config_item *name = janus_config_get_item(cat, "name");
+		janus_config_item *subname = janus_config_get_item(cat, "subname");
 		janus_config_item *date = janus_config_get_item(cat, "date");
+		janus_config_item *date_end = janus_config_get_item(cat, "date_end");
 		janus_config_item *audio = janus_config_get_item(cat, "audio");
 		janus_config_item *video = janus_config_get_item(cat, "video");
 		if(!name || !name->value || strlen(name->value) == 0 || !date || !date->value || strlen(date->value) == 0) {
@@ -1769,7 +1775,9 @@ void janus_recordplay_update_recordings_list(void) {
 		rec = g_malloc0(sizeof(janus_recordplay_recording));
 		rec->id = id;
 		rec->name = g_strdup(name->value);
+		rec->subname = g_strdup(subname->value);
 		rec->date = g_strdup(date->value);
+		rec->date_end = g_strdup(date_end->value);
 		if(audio && audio->value) {
 			rec->arc_file = g_strdup(audio->value);
 			char *ext = strstr(rec->arc_file, ".mjr");

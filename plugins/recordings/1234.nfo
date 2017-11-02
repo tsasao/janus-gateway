@@ -1,5 +1,7 @@
 [1234]
 name = Lorenzo says hello!
+subname = test
 date = 2014-10-22 14:44:36
+date_end = 2014-10-22 14:45:36
 audio = rec-sample-audio.mjr
 video = rec-sample-video.mjr
