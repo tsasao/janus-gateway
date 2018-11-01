@@ -2273,7 +2273,11 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 					codec = "pcmu";
 				else if(strstr(mp->codecs.audio_rtpmap, "g722") || strstr(mp->codecs.audio_rtpmap, "G722"))
 					codec = "g722";
-				const char *audiofile = json_string_value(audio);
+
+				/* generate filename by prefix from parameter and long numeric string by clock */
+				char audiofile[1024];
+				g_snprintf(audiofile, 1024, "%s%"SCNu64, json_string_value(audio), janus_get_real_time());
+
 				arc = janus_recorder_create(recordings_path, codec, (char *)audiofile);
 				if(arc == NULL) {
 					JANUS_LOG(LOG_ERR, "[%s] Error starting recorder for audio\n", mp->name);
@@ -2384,7 +2388,8 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 				char stop[200];
 				strftime(stop, sizeof(stop), "%Y-%m-%d %H:%M:%S", tmv);
 				
-				char *origname = strndup(source->vrc->filename, strlen(source->vrc->filename)-8); /* strip ".tmp.mjr" */
+				char *video_origname = strndup(source->vrc->filename, strlen(source->vrc->filename)-8); /* strip ".tmp.mjr" */
+				char *audio_origname = strndup(source->arc->filename, strlen(source->arc->filename)-8); /* strip ".tmp.mjr" */
 				
 				if(source->vrc->filename) {
 					g_snprintf(nfo, 1024,
@@ -2393,19 +2398,22 @@ struct janus_plugin_result *janus_streaming_handle_message(janus_plugin_session 
 							   "subname = %s\r\n"
 							   "date = %s\r\n"
 							   "date_end = %s\r\n"
-							   "video = %s.mjr\r\n",
+							   "video = %s.mjr\r\n"
+							   "audio = %s.mjr\r\n",
 							   recording_id,
 							   mp->id,
 							   mp->name,
 							   start,
 							   stop,
-							   origname);
+							   video_origname,
+							   audio_origname);
 				}
 				/* Write to the file now */
 				fwrite(nfo, strlen(nfo), sizeof(char), file);
 				fclose(file);
 				
-				free(origname);
+				free(video_origname);
+				free(audio_origname);
 			}
             
 			if(audio && json_is_true(audio) && source->arc) {
